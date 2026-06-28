@@ -1,0 +1,13 @@
+{
+  "domain": "HTTP_File_Toolbox",
+  "name": "HTTP File Toolbox",
+  "documentation": "https://github.com/yourname/http_file_toolbox",
+  "issue_tracker": "https://github.com/yourname/http_file_toolbox/issues",
+  "dependencies": [],
+  "codeowners": ["@yourname"],
+  "requirements": [],
+  "iot_class": "calculated",
+  "integration_type": "service",
+  "version": "1.0.0",
+  "config_flow": true
+}

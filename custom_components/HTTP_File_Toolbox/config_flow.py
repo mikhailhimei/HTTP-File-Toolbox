@@ -5,7 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 
-DOMAIN = "http_request"
+DOMAIN = "HTTP-File-Toolbox"
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -14,7 +14,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: dict[str, str] | None = None):
         if user_input is not None:
             return self.async_create_entry(
-    title="HTTP HA",
+    title="HTTP File Toolbox",
     data={},
             )
 

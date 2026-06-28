@@ -17,7 +17,7 @@ from homeassistant.helpers import config_validation as cv
 
 CONF_BODY = "body"
 
-DOMAIN = "http_request"
+DOMAIN = "HTTP-File-Toolbox"
 SERVICE_REQUEST = "request"
 SERVICE_WRITE_FILE = "write_file"
 
