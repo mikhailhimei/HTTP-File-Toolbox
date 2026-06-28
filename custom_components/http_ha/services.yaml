@@ -26,16 +26,16 @@ request:
         text:
     headers:
       name: Headers
-      description: Optional headers in JSON format.
+      description: Optional headers as JSON object.
       example: '{"Authorization": "Bearer token"}'
       selector:
-        text:
+        object: {}
     body:
       name: Body
-      description: Optional request body in JSON format.
+      description: Optional request body as JSON object or value.
       example: '{"name": "value"}'
       selector:
-        text:
+        object: {}
     timeout:
       name: Timeout
       description: Request timeout in seconds.
