@@ -45,3 +45,20 @@ request:
           min: 1
           max: 120
           mode: box
+
+write_file:
+  name: Create or update file
+  description: Create a new file or overwrite an existing file.
+  fields:
+    file_path:
+      name: File name or path
+      description: File name or path to save, for example /config/sa.json.
+      required: true
+      selector:
+        text:
+    data:
+      name: Data
+      description: Text or JSON data to write to the file.
+      required: true
+      selector:
+        text:

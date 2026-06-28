@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import aiohttp
@@ -18,6 +19,7 @@ CONF_BODY = "body"
 
 DOMAIN = "http_request"
 SERVICE_REQUEST = "request"
+SERVICE_WRITE_FILE = "write_file"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +32,13 @@ SERVICE_SCHEMA = vol.Schema(
         vol.Optional(CONF_HEADERS, default={}): object,
         vol.Optional(CONF_BODY): object,
         vol.Optional(CONF_TIMEOUT, default=10): vol.Coerce(int),
+    }
+)
+
+WRITE_FILE_SCHEMA = vol.Schema(
+    {
+        vol.Required("file_path"): cv.string,
+        vol.Required("data"): object,
     }
 )
 
@@ -70,6 +79,21 @@ def _coerce_body(value: Any) -> Any:
             return value
 
     return value
+
+
+def _resolve_file_path(hass: HomeAssistant, file_path: str) -> Path:
+    path = Path(file_path)
+    if path.is_absolute():
+        return path
+    return Path(hass.config.path(file_path))
+
+
+def _serialize_data(data: Any) -> str:
+    if data is None:
+        return ""
+    if isinstance(data, str):
+        return data
+    return json.dumps(data, ensure_ascii=False, indent=2)
 
 
 async def _request_http(
@@ -125,6 +149,21 @@ async def async_handle_request(call: ServiceCall) -> dict[str, Any]:
         raise HomeAssistantError(f"HTTP request failed: {err}") from err
 
 
+async def async_handle_write_file(call: ServiceCall) -> dict[str, Any]:
+    file_path = call.data["file_path"]
+    data = call.data["data"]
+    path = _resolve_file_path(call.hass, file_path)
+    existed = path.exists()
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_serialize_data(data), encoding="utf-8")
+    except OSError as err:
+        raise HomeAssistantError(f"Unable to write file {path}: {err}") from err
+
+    return {"path": str(path), "created": not existed, "updated": existed}
+
+
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     if not hass.services.has_service(DOMAIN, SERVICE_REQUEST):
         hass.services.async_register(
@@ -134,6 +173,15 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             schema=SERVICE_SCHEMA,
             supports_response=SupportsResponse.OPTIONAL,
         )
+
+    if not hass.services.has_service(DOMAIN, SERVICE_WRITE_FILE):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_WRITE_FILE,
+            async_handle_write_file,
+            schema=WRITE_FILE_SCHEMA,
+        )
+
     return True
 
 
