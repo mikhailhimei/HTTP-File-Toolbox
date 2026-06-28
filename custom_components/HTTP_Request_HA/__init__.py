@@ -16,7 +16,7 @@ from homeassistant.helpers import config_validation as cv
 
 CONF_BODY = "body"
 
-DOMAIN = "http_ha"
+DOMAIN = "http_request"
 SERVICE_REQUEST = "request"
 
 _LOGGER = logging.getLogger(__name__)
