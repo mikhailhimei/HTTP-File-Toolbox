@@ -6,6 +6,7 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import aiohttp
 import voluptuous as vol
@@ -16,6 +17,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 CONF_BODY = "body"
+CONF_QUERY_PARAMETERS = "query_parameters"
 
 DOMAIN = "http_file_toolbox"
 SERVICE_REQUEST = "request"
@@ -31,6 +33,7 @@ SERVICE_SCHEMA = vol.Schema(
         ),
         vol.Optional(CONF_HEADERS, default={}): object,
         vol.Optional(CONF_BODY): object,
+        vol.Optional(CONF_QUERY_PARAMETERS, default=""): cv.string,
         vol.Optional(CONF_TIMEOUT, default=10): vol.Coerce(int),
     }
 )
@@ -81,6 +84,33 @@ def _coerce_body(value: Any) -> Any:
     return value
 
 
+def _append_query_parameters(url: str, query_parameters: str | None) -> str:
+    if query_parameters is None:
+        return url
+
+    text = query_parameters.strip()
+    if not text:
+        return url
+
+    parameters: list[tuple[str, str]] = []
+    for line in text.splitlines():
+        stripped_line = line.strip()
+        if not stripped_line:
+            continue
+        if stripped_line.startswith("?"):
+            stripped_line = stripped_line[1:]
+        for key, value in parse_qsl(stripped_line, keep_blank_values=True):
+            parameters.append((key, value))
+
+    if not parameters:
+        return url
+
+    parts = urlsplit(url)
+    existing_parameters = parse_qsl(parts.query, keep_blank_values=True)
+    query = urlencode(existing_parameters + parameters, doseq=True)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
+
+
 def _resolve_file_path(hass: HomeAssistant, file_path: str) -> Path:
     path = Path(file_path)
     if path.is_absolute():
@@ -109,7 +139,9 @@ async def _request_http(
 
         if body is not None:
             if method in {"GET", "HEAD"}:
-                request_kwargs["data"] = json.dumps(body) if isinstance(body, (dict, list)) else str(body)
+                request_kwargs["data"] = (
+                    json.dumps(body) if isinstance(body, (dict, list)) else str(body)
+                )
             else:
                 request_kwargs["json"] = body
 
@@ -136,7 +168,9 @@ async def _request_http(
 
 async def async_handle_request(call: ServiceCall) -> dict[str, Any]:
     method = call.data[CONF_METHOD].upper()
-    url = call.data[CONF_URL]
+    url = _append_query_parameters(
+        call.data[CONF_URL], call.data.get(CONF_QUERY_PARAMETERS)
+    )
     headers = _coerce_headers(call.data.get(CONF_HEADERS, {}))
     body = _coerce_body(call.data.get(CONF_BODY))
     timeout = call.data.get(CONF_TIMEOUT, 10)
