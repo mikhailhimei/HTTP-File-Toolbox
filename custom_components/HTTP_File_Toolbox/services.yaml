@@ -36,6 +36,15 @@ request:
       example: '{"name": "value"}'
       selector:
         object: {}
+    query_parameters:
+      name: Query parameters
+      description: Optional query parameters, one key=value pair per line. They are appended to the URL query string.
+      example: |-
+        type=123
+        fix=321
+      selector:
+        text:
+          multiline: true
     timeout:
       name: Timeout
       description: Request timeout in seconds.
