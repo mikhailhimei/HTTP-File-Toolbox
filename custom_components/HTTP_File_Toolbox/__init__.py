@@ -177,8 +177,13 @@ async def async_handle_request(call: ServiceCall) -> dict[str, Any]:
 
     try:
         return await _request_http(method, url, headers, body, timeout)
-    except asyncio.TimeoutError as err:
-        raise HomeAssistantError(f"Request timeout after {timeout} seconds") from err
+    except asyncio.TimeoutError:
+        return {
+            "status": 500,
+            "headers": {},
+            "content_type": "text/plain",
+            "body": f"Request timeout after {timeout} seconds",
+        }
     except aiohttp.ClientError as err:
         raise HomeAssistantError(f"HTTP request failed: {err}") from err
 
