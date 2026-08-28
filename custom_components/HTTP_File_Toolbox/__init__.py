@@ -185,7 +185,12 @@ async def async_handle_request(call: ServiceCall) -> dict[str, Any]:
             "body": f"Request timeout after {timeout} seconds",
         }
     except aiohttp.ClientError as err:
-        raise HomeAssistantError(f"HTTP request failed: {err}") from err
+        return {
+            "status": 500,
+            "headers": {},
+            "content_type": "text/plain",
+            "body": f"HTTP request failed: {err}",
+        }
 
 
 async def async_handle_write_file(call: ServiceCall) -> dict[str, Any]:
