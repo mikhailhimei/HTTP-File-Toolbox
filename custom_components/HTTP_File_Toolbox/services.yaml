@@ -71,3 +71,24 @@ write_file:
       required: true
       selector:
         text:
+
+read_file:
+  name: Read file
+  description: Read a file and return its content to a response variable as text or JSON.
+  fields:
+    file_path:
+      name: File name or path
+      description: File name or path to read, for example /config/sa.json.
+      required: true
+      selector:
+        text:
+    format:
+      name: Format
+      description: Return format for the file content.
+      default: txt
+      required: true
+      selector:
+        select:
+          options:
+            - txt
+            - json

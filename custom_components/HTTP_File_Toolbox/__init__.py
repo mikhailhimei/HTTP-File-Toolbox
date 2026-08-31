@@ -22,6 +22,10 @@ CONF_QUERY_PARAMETERS = "query_parameters"
 DOMAIN = "http_file_toolbox"
 SERVICE_REQUEST = "request"
 SERVICE_WRITE_FILE = "write_file"
+SERVICE_READ_FILE = "read_file"
+
+FILE_FORMAT_TXT = "txt"
+FILE_FORMAT_JSON = "json"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +46,15 @@ WRITE_FILE_SCHEMA = vol.Schema(
     {
         vol.Required("file_path"): cv.string,
         vol.Required("data"): object,
+    }
+)
+
+READ_FILE_SCHEMA = vol.Schema(
+    {
+        vol.Required("file_path"): cv.string,
+        vol.Optional("format", default=FILE_FORMAT_TXT): vol.In(
+            [FILE_FORMAT_TXT, FILE_FORMAT_JSON]
+        ),
     }
 )
 
@@ -208,6 +221,29 @@ async def async_handle_write_file(call: ServiceCall) -> dict[str, Any]:
     return {"path": str(path), "created": not existed, "updated": existed}
 
 
+async def async_handle_read_file(call: ServiceCall) -> dict[str, Any]:
+    file_path = call.data["file_path"]
+    output_format = call.data["format"]
+    path = _resolve_file_path(call.hass, file_path)
+
+    try:
+        raw_data = path.read_text(encoding="utf-8")
+    except FileNotFoundError as err:
+        raise HomeAssistantError(f"File not found: {path}") from err
+    except OSError as err:
+        raise HomeAssistantError(f"Unable to read file {path}: {err}") from err
+
+    if output_format == FILE_FORMAT_JSON:
+        try:
+            data: Any = json.loads(raw_data)
+        except json.JSONDecodeError as err:
+            raise HomeAssistantError(f"File {path} does not contain valid JSON") from err
+    else:
+        data = raw_data
+
+    return {"path": str(path), "format": output_format, "data": data}
+
+
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     if not hass.services.has_service(DOMAIN, SERVICE_REQUEST):
         hass.services.async_register(
@@ -224,6 +260,15 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             SERVICE_WRITE_FILE,
             async_handle_write_file,
             schema=WRITE_FILE_SCHEMA,
+        )
+
+    if not hass.services.has_service(DOMAIN, SERVICE_READ_FILE):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_READ_FILE,
+            async_handle_read_file,
+            schema=READ_FILE_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
         )
 
     return True
